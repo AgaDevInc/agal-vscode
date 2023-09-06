@@ -1,0 +1,31 @@
+{
+  "name": "Aga-Language",
+  "displayName": "Lenguaje Aga",
+  "description": "suporte para aga language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.81.0"
+  },
+  "publisher": "aga-language",
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "agalanguage",
+      "aliases": ["Lenguaje Aga", "agalanguage"],
+      "extensions": [".agal"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "agalanguage",
+      "scopeName": "source.agal",
+      "path": "./syntaxes/agalanguage.tmLanguage.json"
+    }],
+    "snippets": [{
+      "language": "agalanguage",
+      "path": "./snippets/agalanguage.json"
+    }]
+  }
+}
