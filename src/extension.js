@@ -1,10 +1,41 @@
 'use strict';
 const vscode = require('vscode');
-const agal = require('./agal');
+const https = require('node:https');
+
+// agal code 'https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/index.cjs';
+// my unDeno code 'https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/unDeno.js';
+function get(url) {
+	return new Promise((resolve, reject) => {
+		https.get(url, (res) => {
+			let data = '';
+			res.on('data', (chunk) => {
+				data += chunk;
+			});
+			res.on('end', () => {
+				resolve(data);
+			});
+		}).on('error', reject);
+	});
+}
+async function loadAgal(){
+	const codeDeno = await get('https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/unDeno.js');
+	const moduleDeno = { exports: {} };
+	const func = Function('module', 'require', codeDeno);
+	func(moduleDeno, require);
+
+	const agalCode = await get('https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/index.cjs');
+	const agalModule = { exports: {} };
+	const agalFunc = Function('module', 'Deno', agalCode);
+	agalFunc(agalModule, moduleDeno.exports)
+  return await agalModule.exports;
+}
 
 module.exports = {
 	async activate() {
-		const { evalLine, AgalFunction, AgalClass } = await agal;
+		const { runtime } = await loadAgal();
+		const {evalLine} = runtime;
+		const {AgalFunction, AgalClass} = runtime.values.complex
+
 		vscode.languages.registerCompletionItemProvider('agalanguage', {
 			async provideCompletionItems(document, position) {
 				const code = document.getText();

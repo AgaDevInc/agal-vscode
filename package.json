@@ -1,11 +1,12 @@
 {
   "name": "Aga-Language",
   "displayName": "Lenguaje Aga",
-  "description": "suporte para aga language",
-  "version": "0.0.1",
+  "description": "suporte para el Lenguaje Aga",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.81.0"
   },
+  "icon": "aga.png",
   "publisher": "aga-language",
   "categories": [
     "Programming Languages"
@@ -32,5 +33,6 @@
     "type": "git",
     "url": "https://github.com/AgaDevInc/AgaL-vscode.git",
     "branch": "main"
-  }
+  },
+  "license": "MIT"
 }
