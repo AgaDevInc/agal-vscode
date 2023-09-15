@@ -31,35 +31,46 @@ async function loadAgal(){
 }
 
 module.exports = {
-	async activate() {
-		const { runtime } = await loadAgal();
-		const {evalLine} = runtime;
-		const {AgalFunction, AgalClass} = runtime.values.complex
+	async activate() {  const { runtime, frontend } = await loadAgal();
+  const {Parser} = frontend;
+  const { evalLine, getModuleScope, interpreter:{evaluate}, values } = runtime;
+  const {defaultStack, complex, primitive: {AgalNullValue}} = values
+  const { AgalFunction, AgalClass } = complex;
+
+  const listEvaluate = async (program, scope, stack) => {
+    let result = AgalNullValue;
+    if(!Array.isArray(program)) return evaluate(program, scope, stack);
+    for(const node of program){
+      result = await evaluate(node, scope, stack);
+    }
+    return result || AgalNullValue;
+  }
 
 		vscode.languages.registerCompletionItemProvider('agalanguage', {
 			async provideCompletionItems(document, position) {
 				const code = document.getText();
+				const path = document.fileName;
 				const lines = code.split('\n');
-				const line = lines[position.line].replace('\r', '').replace('\n', '').trim();
+				const line = lines[position.line].replace('\r', '').trim();
 				lines[position.line] = '';
 				const restFile = lines.join('\n');
-				const [_, scope] = await evalLine(restFile);
+				const [_, scope] = await evalLine(restFile, 0, await getModuleScope(path));
 				if (line.endsWith('.')) {
 					const noDot = line.slice(0, line.length - 1);
-					const [data] = await evalLine(noDot, undefined, scope);
-					/** @type {string[]} */
-					const keys = await data.keys();
-					const items = keys.map(async key => {
-						const val = await data.get(key);
+					const parser = new Parser();
+					const program = parser.produceAST(noDot, false, path);
+					const data=await listEvaluate(program.body, scope, defaultStack)
+					const keys = data.deepKeys();
+					return keys.map(key => {
+						const val = data.getSync(key);
 						if (val instanceof AgalFunction)
 							return new vscode.CompletionItem(key, vscode.CompletionItemKind.Method);
 						if (val instanceof AgalClass)
 							return new vscode.CompletionItem(key, vscode.CompletionItemKind.Class);
 						return new vscode.CompletionItem(key, vscode.CompletionItemKind.Variable);
 					});
-					return await Promise.all(items);
 				}
-				const items = Object.keys(scope.toObject()).map(name => {
+				return Object.keys(scope.toObject()).map(name => {
 					const val = scope.lookupVar(name);
 					if (val instanceof AgalFunction)
 						return new vscode.CompletionItem(name, vscode.CompletionItemKind.Method);
@@ -67,7 +78,6 @@ module.exports = {
 						return new vscode.CompletionItem(name, vscode.CompletionItemKind.Class);
 					return new vscode.CompletionItem(name, vscode.CompletionItemKind.Variable);
 				});
-				return items;
 			},
 		});
 	},
