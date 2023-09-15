@@ -2,7 +2,7 @@
   "name": "Aga-Language",
   "displayName": "Lenguaje Aga",
   "description": "suporte para el Lenguaje Aga",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.81.0"
   },
