@@ -43,7 +43,7 @@ async function include(url: string, _code?: string) {
 }
 
 type Agal =
-  typeof import('https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/index.ts');
+  typeof import('https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/index.cjs');
 async function loadAgal() {
   const Deno_ = await include(
     'https://raw.githubusercontent.com/AgaDevInc/AgaLanguage/main/unDeno.js',`const { inspect } = require('node:util');
@@ -82,44 +82,43 @@ async function loadAgal() {
   const agalModule = { exports: {} };
   const agalFunc = Function('module', 'Deno', agalCode);
   await agalFunc(agalModule, Deno_);
-  return (await agalModule.exports) as Agal;
+  return (await agalModule.exports) as any;
 }
-const path = Deno.cwd() + '/../agalanguage/index.agal';
+const path = Deno.cwd() + '/../agalanguage/iniciar.agal';
 const code = Deno.readTextFileSync(path);
 const position = { line: 1 };
 
 type Sync<T> = T extends Promise<infer U> ? U : T;
 
 const data = (async function () {
-  const { runtime, frontend } = await loadAgal();
+  const { runtime, frontend } = await loadAgal() as Agal;
   const {Parser} = frontend;
-  const { evalLine, getModuleScope, interpreter:{evaluate}, values } = runtime;
-  const {defaultStack, complex, primitive: {AgalNullValue}} = values
+  const { evalLine, getModuleScope, interpreter:{default:evaluate}, values, stack:{defaultStack} } = runtime;
+  const {complex, primitive: {AgalNull}} = values
   const { AgalFunction, AgalClass } = complex;
 
-  const listEvaluate: typeof evaluate = async (program, scope, stack) => {
+  const listEvaluate: (node: any, env: any, stack: any) => Promise<InstanceType<typeof AgalNull>> = async (program, scope, stack) => {
     let result: Sync<ReturnType<typeof evaluate>> | undefined;
     if(!Array.isArray(program)) return evaluate(program, scope, stack);
     for(const node of program){
       result = await evaluate(node, scope, stack);
     }
-    return result || AgalNullValue;
+    return result || AgalNull.from(true);
   }
 
   const lines = code.split('\n');
   const line = lines[position.line].replace('\r', '').trim();
   lines[position.line] = '';
   const restFile = lines.join('\n');
-  const [_, scope] = await evalLine(restFile, 0, await getModuleScope(path));
+  const [_, scope] = await evalLine(restFile, 0, getModuleScope(path));
   if (line.endsWith('.')) {
     const noDot = line.slice(0, line.length - 1);
     const parser = new Parser();
     const program = parser.produceAST(noDot, false, path);
-    const data=await listEvaluate(program.body, scope, defaultStack);
-    console.log(data, scope.toObject())
-    const keys = data.deepKeys();
+    const data= await listEvaluate(program.body, scope, defaultStack);
+    const keys = data.keys();
     return keys.map(key => {
-      const val = data.getSync(key);
+      const val = (data.get as any)(defaultStack,key);
       if (val instanceof AgalFunction)
         return new vscode.CompletionItem(key, vscode.CompletionItemKind.Method);
       if (val instanceof AgalClass)
@@ -128,7 +127,7 @@ const data = (async function () {
     });
   }
   return Object.keys(scope.toObject()).map(name => {
-    const val = scope.lookupVar(name);
+    const val = scope.get(name);
     if (val instanceof AgalFunction)
       return new vscode.CompletionItem(name, vscode.CompletionItemKind.Method);
     if (val instanceof AgalClass)
